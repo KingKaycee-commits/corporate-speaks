@@ -24,6 +24,9 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
+.nav{display:flex;gap:16px;margin-bottom:18px;}
+.nav a{color:var(--muted);text-decoration:none;font-size:0.9rem;padding-bottom:3px;border-bottom:2px solid transparent;}
+.nav a:first-child{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
 .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px;}
 h1{font-size:1.25rem;margin:0 0 4px;}
 .sub{color:var(--muted);font-size:0.9rem;margin:0 0 20px;}
@@ -51,6 +54,7 @@ label{font-size:0.85rem;color:var(--muted);display:block;margin-bottom:4px;}
 </head>
 <body>
 <div class="wrap">
+  <div class="nav"><a href="index.html">Exec Speak</a><a href="strategy.html">Strategy Desk</a><a href="concept.html">Concept Explainer</a><a href="briefing.html">Briefing Note</a><a href="vendor.html">Vendor Prep</a><a href="glossary.html">Glossary</a><a href="inbox.html">Inbox Triage</a></div>
   <h1>Exec Speak</h1>
   <p class="sub">Paste what you actually want to say. Get it back sounding like something you'd send to a Director.</p>
 

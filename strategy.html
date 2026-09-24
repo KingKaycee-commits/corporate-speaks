@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Strategy Desk</title>
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fff; --border:#e4e2dd; --text:#1c1b19; --muted:#6b6a66;
+  --accent:#1c3d5a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16171a; --panel:#1f2024; --border:#33343a; --text:#e9e9ea; --muted:#9a9a9e; --accent:#7ea6cc;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16171a; --panel:#1f2024; --border:#33343a; --text:#e9e9ea; --muted:#9a9a9e; --accent:#7ea6cc;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.wrap{max-width:680px;margin:0 auto;padding:28px 18px 60px;}
+.nav{display:flex;gap:16px;margin-bottom:18px;}
+.nav a{color:var(--muted);text-decoration:none;font-size:0.9rem;padding-bottom:3px;border-bottom:2px solid transparent;}
+.nav a:last-child{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+h1{font-size:1.25rem;margin:0 0 4px;}
+.sub{color:var(--muted);font-size:0.9rem;margin:0 0 20px;}
+textarea{
+  width:100%;min-height:130px;padding:12px;border-radius:10px;border:1px solid var(--border);
+  background:var(--panel);color:var(--text);font-size:0.95rem;font-family:inherit;resize:vertical;
+}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0;}
+button{
+  padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--text);font-size:0.9rem;cursor:pointer;
+}
+button.primary{background:var(--accent);color:#fff;border:none;font-weight:600;}
+button.primary:disabled{opacity:0.6;cursor:default;}
+.filename{font-size:0.85rem;color:var(--muted);}
+.result{
+  margin-top:18px;padding:16px 18px;border-radius:10px;border:1px solid var(--border);
+  background:var(--panel);white-space:pre-wrap;line-height:1.55;min-height:40px;font-size:0.95rem;
+}
+.result.empty{color:var(--muted);font-style:italic;}
+.copybar{display:flex;justify-content:flex-end;margin-top:8px;}
+label{font-size:0.85rem;color:var(--muted);display:block;margin-bottom:4px;}
+input[type=file]{font-size:0.85rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><a href="index.html">Exec Speak</a><a href="strategy.html">Strategy Desk</a><a href="concept.html">Concept Explainer</a><a href="briefing.html">Briefing Note</a><a href="vendor.html">Vendor Prep</a><a href="glossary.html">Glossary</a><a href="inbox.html">Inbox Triage</a></div>
+  <h1>Strategy Desk</h1>
+  <p class="sub">Paste a task, a question, or raw notes. Or upload a .md/.txt file. You get back an approach, not a definition — grounded in how EA work and business development in oil &amp; gas / IPP / gas-to-power actually run.</p>
+
+  <label for="input">What are you working on</label>
+  <textarea id="input" placeholder="e.g. Director wants a briefing note on a JV structure with a gas supplier before Monday's meeting — what should it cover and in what order?"></textarea>
+
+  <div class="row">
+    <input type="file" id="fileInput" accept=".md,.txt">
+    <span class="filename" id="filename"></span>
+  </div>
+
+  <div class="row">
+    <button class="primary" id="go">Get approach</button>
+    <button id="clear">Clear</button>
+  </div>
+
+  <div id="result" class="result empty">Your strategy appears here.</div>
+  <div class="copybar"><button id="copy" style="display:none;">Copy</button></div>
+</div>
+
+<script>
+const GROQ_API_KEY = "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";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+const SYSTEM_CONTEXT = `You are a strategy sounding board for Kingsley, Executive Assistant to the Director of New Business at Welbeck Electricity Distribution Ltd in Lagos, Nigeria. He reports to the Director and supports business development work touching oil and gas sector partners, IPPs (independent power producers), gas-to-power supply chains, and JV structures. He is building foundational literacy in oil and gas and VoIP/telecom, coming from a 4+ year Customer Success/CX background across fintech, SaaS, and healthcare tech (Branch International, RxAll, Sendme Food Technology), so he thinks in terms of retention, stakeholder trust, structured processes, and measurable outcomes rather than pure engineering or petroleum-technical depth.
+
+When he brings you a task, question, or set of notes, respond like an experienced Chief of Staff or senior EA would: practical, sequenced, and specific to Nigerian business development and oil & gas / power sector context where relevant. Do not give generic project-management platitudes. Give a real recommended approach: what to do first, what to watch for, what questions to ask before moving, and any format or structure the deliverable should take. If the task is EA-craft (calendar, inbox, briefing notes, stakeholder handling) ground it in how a Director-level office actually runs, not entry-level admin advice. If it touches oil & gas or IPP/JV concepts he hasn't yet mastered, explain the business logic in plain terms before the tactical steps. Be direct and specific. Skip disclaimers and hedging. No bullet-point fluff for its own sake - use structure only where it actually clarifies the sequence.`;
+
+const input = document.getElementById('input');
+const fileInput = document.getElementById('fileInput');
+const filename = document.getElementById('filename');
+const go = document.getElementById('go');
+const clearBtn = document.getElementById('clear');
+const result = document.getElementById('result');
+const copyBtn = document.getElementById('copy');
+
+let uploadedText = '';
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  filename.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => { uploadedText = e.target.result; };
+  reader.readAsText(file);
+});
+
+async function run(){
+  const typed = input.value.trim();
+  const combined = [typed, uploadedText ? ("Uploaded notes:\n" + uploadedText) : ""].filter(Boolean).join("\n\n");
+  if(!combined){ return; }
+  go.disabled = true;
+  result.classList.remove('empty');
+  result.textContent = "Working...";
+  copyBtn.style.display = 'none';
+  try{
+    const resp = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + GROQ_API_KEY
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-oss-20b",
+        messages: [
+          { role: "system", content: SYSTEM_CONTEXT },
+          { role: "user", content: combined }
+        ]
+      })
+    });
+    if(!resp.ok){
+      throw new Error("request failed: " + resp.status);
+    }
+    const data = await resp.json();
+    const out = data?.choices?.[0]?.message?.content?.trim() || "No response came back. Try again.";
+    result.textContent = out;
+    copyBtn.style.display = 'inline-block';
+  }catch(e){
+    result.textContent = "Something went wrong generating that (" + e.message + "). Try again.";
+  }
+  go.disabled = false;
+}
+
+go.addEventListener('click', run);
+clearBtn.addEventListener('click', () => {
+  input.value = '';
+  uploadedText = '';
+  fileInput.value = '';
+  filename.textContent = '';
+  result.textContent = 'Your strategy appears here.';
+  result.classList.add('empty');
+  copyBtn.style.display = 'none';
+});
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(result.textContent).catch(()=>{});
+  copyBtn.textContent = 'Copied';
+  setTimeout(()=>{ copyBtn.textContent = 'Copy'; }, 1500);
+});
+</script>
+</body>
+</html>

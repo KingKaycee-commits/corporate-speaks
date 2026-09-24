@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Concept Explainer</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--border:#e4e2dd;--text:#1c1b19;--muted:#6b6a66;--accent:#1c3d5a;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#16171a;--panel:#1f2024;--border:#33343a;--text:#e9e9ea;--muted:#9a9a9e;--accent:#7ea6cc;}}
+:root[data-theme="dark"]{--bg:#16171a;--panel:#1f2024;--border:#33343a;--text:#e9e9ea;--muted:#9a9a9e;--accent:#7ea6cc;}
+*{box-sizing:border-box;} html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:680px;margin:0 auto;padding:28px 18px 60px;}
+.nav{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+.nav a{color:var(--muted);text-decoration:none;font-size:0.85rem;padding-bottom:3px;border-bottom:2px solid transparent;}
+.nav a.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+h1{font-size:1.25rem;margin:0 0 4px;} .sub{color:var(--muted);font-size:0.9rem;margin:0 0 20px;}
+input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:0.95rem;}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+button{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:0.9rem;cursor:pointer;}
+button.primary{background:var(--accent);color:#fff;border:none;font-weight:600;}
+button.primary:disabled{opacity:0.6;cursor:default;}
+.result{margin-top:18px;padding:16px 18px;border-radius:10px;border:1px solid var(--border);background:var(--panel);white-space:pre-wrap;line-height:1.55;min-height:40px;font-size:0.95rem;}
+.result.empty{color:var(--muted);font-style:italic;}
+.diagram{margin-top:14px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel);overflow-x:auto;}
+</style></head><body>
+<div class="wrap">
+  <div class="nav">
+    <a href="index.html">Exec Speak</a><a href="strategy.html">Strategy Desk</a>
+    <a href="concept.html" class="active">Concept Explainer</a><a href="briefing.html">Briefing Note</a>
+    <a href="vendor.html">Vendor Prep</a><a href="glossary.html">Glossary</a><a href="inbox.html">Inbox Triage</a>
+  </div>
+  <h1>Concept Explainer</h1>
+  <p class="sub">Type any term or idea you keep running into — PPA, capacity charge, JV structuring, SIP trunking. You get a plain-language breakdown, the business logic behind it, and a simple flow diagram when the concept has a structure worth seeing.</p>
+  <input type="text" id="input" placeholder="e.g. take-or-pay clause in gas supply agreements">
+  <div class="row">
+    <button class="primary" id="go">Explain it</button>
+    <button id="clear">Clear</button>
+  </div>
+  <div id="result" class="result empty">Your explanation appears here.</div>
+  <div id="diagramWrap"></div>
+</div>
+<script>
+const GROQ_API_KEY = "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";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const SYSTEM = `You explain business, oil & gas, IPP, gas-to-power, JV, and telecom/VoIP concepts to Kingsley, an EA to a Director of New Business at a Nigerian power distribution company, coming from a Customer Success background, not an engineer. Explain in plain language with a concrete analogy first, then the real mechanics, then why it matters in Nigerian business development practice. End with 2-3 follow-up questions a Director would expect him to already be thinking about. If the concept has a clear sequence or flow (money, gas, approvals moving between parties), also output a separate line starting exactly with "DIAGRAM:" followed by a simple arrow chain like "Gas Supplier -> IPP -> Grid -> Welbeck -> End Customer" using only that format, one per relevant flow. If there is no clear flow, omit the DIAGRAM line entirely.`;
+const input=document.getElementById('input'),go=document.getElementById('go'),result=document.getElementById('result'),diagramWrap=document.getElementById('diagramWrap');
+function renderDiagram(line){
+  const chain=line.replace('DIAGRAM:','').trim().split('->').map(s=>s.trim()).filter(Boolean);
+  if(chain.length<2) return '';
+  const boxW=140,boxH=50,gap=40,svgW=chain.length*boxW+(chain.length-1)*gap+20,svgH=90;
+  let svg=`<svg viewBox="0 0 ${svgW} ${svgH}" width="100%" style="max-width:100%">`;
+  chain.forEach((n,i)=>{
+    const x=10+i*(boxW+gap);
+    svg+=`<rect x="${x}" y="20" width="${boxW}" height="${boxH}" rx="8" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`;
+    svg+=`<text x="${x+boxW/2}" y="${20+boxH/2+5}" text-anchor="middle" font-size="12" fill="currentColor">${n}</text>`;
+    if(i<chain.length-1){
+      const x1=x+boxW, x2=x+boxW+gap;
+      svg+=`<line x1="${x1}" y1="45" x2="${x2}" y2="45" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrow)"/>`;
+    }
+  });
+  svg+=`<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="var(--accent)"/></marker></defs></svg>`;
+  return svg;
+}
+async function run(){
+  const text=input.value.trim(); if(!text) return;
+  go.disabled=true; result.classList.remove('empty'); result.textContent="Working..."; diagramWrap.innerHTML='';
+  try{
+    const resp=await fetch(GROQ_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_API_KEY},
+      body:JSON.stringify({model:"openai/gpt-oss-20b",messages:[{role:"system",content:SYSTEM},{role:"user",content:text}]})});
+    if(!resp.ok) throw new Error("request failed: "+resp.status);
+    const data=await resp.json();
+    let out=data?.choices?.[0]?.message?.content?.trim()||"No response came back. Try again.";
+    const lines=out.split('\n'); const diagramLines=lines.filter(l=>l.trim().startsWith('DIAGRAM:'));
+    out=lines.filter(l=>!l.trim().startsWith('DIAGRAM:')).join('\n').trim();
+    result.textContent=out;
+    diagramWrap.innerHTML=diagramLines.map(l=>`<div class="diagram">${renderDiagram(l)}</div>`).join('');
+  }catch(e){ result.textContent="Something went wrong ("+e.message+"). Try again."; }
+  go.disabled=false;
+}
+go.addEventListener('click',run);
+document.getElementById('clear').addEventListener('click',()=>{input.value='';result.textContent='Your explanation appears here.';result.classList.add('empty');diagramWrap.innerHTML='';});
+</script></body></html>

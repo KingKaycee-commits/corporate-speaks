@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Briefing Note</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--border:#e4e2dd;--text:#1c1b19;--muted:#6b6a66;--accent:#1c3d5a;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#16171a;--panel:#1f2024;--border:#33343a;--text:#e9e9ea;--muted:#9a9a9e;--accent:#7ea6cc;}}
+:root[data-theme="dark"]{--bg:#16171a;--panel:#1f2024;--border:#33343a;--text:#e9e9ea;--muted:#9a9a9e;--accent:#7ea6cc;}
+*{box-sizing:border-box;} html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:680px;margin:0 auto;padding:28px 18px 60px;}
+.nav{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+.nav a{color:var(--muted);text-decoration:none;font-size:0.85rem;padding-bottom:3px;border-bottom:2px solid transparent;}
+.nav a.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+h1{font-size:1.25rem;margin:0 0 4px;} .sub{color:var(--muted);font-size:0.9rem;margin:0 0 20px;}
+textarea{width:100%;min-height:130px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:0.95rem;font-family:inherit;resize:vertical;}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+button{padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:0.9rem;cursor:pointer;}
+button.primary{background:var(--accent);color:#fff;border:none;font-weight:600;}
+button.primary:disabled{opacity:0.6;cursor:default;}
+.result{margin-top:18px;padding:16px 18px;border-radius:10px;border:1px solid var(--border);background:var(--panel);white-space:pre-wrap;line-height:1.55;min-height:40px;font-size:0.95rem;}
+.result.empty{color:var(--muted);font-style:italic;}
+</style></head><body>
+<div class="wrap">
+  <div class="nav">
+    <a href="index.html">Exec Speak</a><a href="strategy.html">Strategy Desk</a>
+    <a href="concept.html">Concept Explainer</a><a href="briefing.html" class="active">Briefing Note</a>
+    <a href="vendor.html">Vendor Prep</a><a href="glossary.html">Glossary</a><a href="inbox.html">Inbox Triage</a>
+  </div>
+  <h1>Briefing Note</h1>
+  <p class="sub">Give it a topic, some rough notes, or what you know so far. It comes back structured the way a Director actually reads: situation, key facts, decision needed, recommendation.</p>
+  <textarea id="input" placeholder="e.g. Director needs background before Monday's call with a gas supplier about a proposed JV. Here's what I know so far..."></textarea>
+  <div class="row">
+    <button class="primary" id="go">Draft briefing note</button>
+    <button id="clear">Clear</button>
+  </div>
+  <div id="result" class="result empty">Your briefing note appears here.</div>
+</div>
+<script>
+const GROQ_API_KEY = "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";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const SYSTEM = `You write briefing notes for Kingsley, EA to the Director of New Business at Welbeck Electricity Distribution in Nigeria, whose work touches oil & gas partners, IPPs, gas-to-power, and JV structuring. Turn whatever he gives you - a topic, rough notes, partial facts - into a tight briefing note a Director can read in under 90 seconds, using this shape: SITUATION (2-3 sentences, why this matters now), KEY FACTS (bulleted, only what's known - never invent numbers or names), OPEN QUESTIONS (what's still unclear that someone should confirm before the meeting), RECOMMENDATION (a clear suggested next step or stance). Do not pad it. Do not invent facts, figures, or names not given to you - if information is missing, say so under Open Questions instead of guessing.`;
+const input=document.getElementById('input'),go=document.getElementById('go'),result=document.getElementById('result');
+async function run(){
+  const text=input.value.trim(); if(!text) return;
+  go.disabled=true; result.classList.remove('empty'); result.textContent="Working...";
+  try{
+    const resp=await fetch(GROQ_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+GROQ_API_KEY},
+      body:JSON.stringify({model:"openai/gpt-oss-20b",messages:[{role:"system",content:SYSTEM},{role:"user",content:text}]})});
+    if(!resp.ok) throw new Error("request failed: "+resp.status);
+    const data=await resp.json();
+    result.textContent=data?.choices?.[0]?.message?.content?.trim()||"No response came back. Try again.";
+  }catch(e){ result.textContent="Something went wrong ("+e.message+"). Try again."; }
+  go.disabled=false;
+}
+go.addEventListener('click',run);
+document.getElementById('clear').addEventListener('click',()=>{input.value='';result.textContent='Your briefing note appears here.';result.classList.add('empty');});
+</script></body></html>
